@@ -1,0 +1,36 @@
+flowchart LR
+  subgraph IN[Orders in]
+    WEBo[Website<br/>webhook]
+    NYKo[Nykaa<br/>webhook · dup / out-of-order]
+    BLKo[Blinkit<br/>webhook]
+    FLKo[Flipkart<br/>polling only]
+  end
+
+  subgraph AWS["AWS ap-south-1 · ECS Fargate · one NestJS image, two entrypoints"]
+    API["api task<br/>verify HMAC → store raw → 200<br/>ops console · /metrics"]
+    POLL[Flipkart poller<br/>cursor + 5 min overlap]
+    PG[("PostgreSQL RDS · source of truth<br/>inventory + append-only ledger · orders<br/>work tables claimed with SKIP LOCKED:<br/>inbound_events · channel_stock · erp_outbox")]
+    subgraph WRK[worker task]
+      PROC[Order processor<br/>atomic reserve / release]
+      PUSH[Stock pushers<br/>absolute qty · coalesced<br/>lowest stock first]
+      ERPW[ERP worker<br/>circuit breaker]
+      TUNE[Buffer tuner]
+    end
+    RD[("Redis<br/>token bucket per channel")]
+  end
+
+  subgraph OUT[Stock + orders out]
+    WEBs[Website · bulk API]
+    FLKs[Flipkart · 50 SKU/call · 8 rps]
+    NYKs[Nykaa · 1 SKU/call · 4 rps]
+    BLKs[Blinkit · urgent REST + daily CSV]
+    ERP[Business Central<br/>externalDocumentNumber = idempotency key]
+  end
+
+  WEBo & NYKo & BLKo --> API --> PG
+  FLKo -.-> POLL --> PG
+  PG <--> PROC
+  PG <--> TUNE
+  PG --> PUSH --> WEBs & FLKs & NYKs & BLKs
+  PUSH <--> RD
+  PG --> ERPW --> ERP

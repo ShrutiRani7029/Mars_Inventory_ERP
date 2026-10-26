@@ -1,0 +1,24 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: mars, POSTGRES_PASSWORD: mars, POSTGRES_DB: mars_test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mars" --health-interval 2s --health-retries 30
+    defaults:
+      run:
+        working-directory: service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: service/package-lock.json }
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+        env:
+          DATABASE_URL: postgres://mars:mars@localhost:5432/mars_test
