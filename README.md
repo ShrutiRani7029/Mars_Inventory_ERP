@@ -2,6 +2,8 @@
 
 Keeps orders and stock in sync across **Website, Nykaa, Flipkart and Blinkit** and pushes every confirmed order to **Microsoft Business Central** exactly once.
 
+**Demo Link** : https://drive.google.com/file/d/1wqhUmskDFtORl3vjVfohowl6kwohh1lN/view?usp=sharing
+
 | Deliverable | Where |
 |---|---|
 | Design doc (all 8 questions, assumptions, trade-offs, AI note, pseudo-code, stretch A) | [`DESIGN.md`](DESIGN.md) |
